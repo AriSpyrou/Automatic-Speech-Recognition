@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-file = "voice//1234"
+file = "voice//567890"
 suffix = ".wav"
 
 
@@ -24,20 +24,79 @@ def segment(filename):
         else:
             filter_audio(filename)
     sr, x = wavfile.read(filename + suffix)  # Load the audio clip with native sampling rate
-    w_size = 50
-    w_offset = 12
-    Zcr = librosa.feature.zero_crossing_rate(x.astype(float), 50, 12)  # Calculate zero-crossing rate
+
+    NS = 40  # Window size in ms
+    MS = 10  # Window offset in ms
+    L = int(NS * (sr/1000))  # Window size in samples
+    R = int(MS * (sr/1000))  # Window offset in samples
+
+    Zc = librosa.feature.zero_crossing_rate(x.astype(float), R, R)  # Calculate zero-crossing rate
+    Zc = np.reshape(np.multiply(Zc, R), (Zc.shape[1],))
     E = []
     i = 0
     while True:
-        if i*w_offset > len(x) or i*w_offset+w_size > len(x):
+        temp = x[i*R:i*R+R].astype(np.int64)
+        E.append(np.sum(np.square(temp)))
+        i += 1
+        if i*R > len(x) or i*R+L > len(x):
             E = np.array(E)
             E = 10*np.log(E)
             E = np.subtract(E, E.max())
             break
-        temp = x[i*w_offset:i*w_offset+w_size].astype(np.int64)
-        E.append(np.sum(np.square(temp)))
-        i += 1
+    eavg = np.mean(E[:10])
+    esig = np.std(E[:10])
+    zcavg = np.mean(Zc[:10])
+    zcsig = np.std(Zc[:10])
+
+    IF = 35  # Fixed threshold for Zc
+    IZCT = max(IF, zcavg + 2*zcsig)  # Variable threshold for Zc
+    IMX = -30
+    ITU = IMX - 20  # High threshold for E
+    ITL = max(eavg+3*esig, ITU-10)  # Low threshold for E
+
+    end_idx = 0
+    voice_pos = []
+
+    # Find the multi-frames where the logarithmic energy is above ITU and save them in a list
+    for i, val in enumerate(E):
+        if i < end_idx:
+            continue
+        if val >= ITL:
+            start_idx = i
+            for j, val2 in enumerate(E[i:]):
+                if val2 <= ITL:
+                    end_idx = j + start_idx
+                    voice_pos.append([start_idx, end_idx])
+                    break
+
+    # Look through voice_pos and merge elements which are no longer than 100 frames long
+    next = True
+    ref_voice_pos = []
+    for i, tup in enumerate(voice_pos):
+        if next:
+            start_idx = tup[0]
+            next = False
+        if tup[1] - start_idx < 30:
+            continue
+        else:
+            try:
+                if voice_pos[i+1][1] - start_idx > 100:
+                    end_idx = voice_pos[i][1]
+                    ref_voice_pos.append([start_idx, end_idx])
+                    next = True
+                    continue
+            except IndexError:
+                end_idx = voice_pos[i][1]
+                ref_voice_pos.append([start_idx, end_idx])
+                print(ref_voice_pos)
+                break
+
+    # Save the segmented voice clips using the unfiltered file as a base
+    for i, pos in enumerate(ref_voice_pos):
+        sr, x = wavfile.read(file + suffix)
+        start_idx = pos[0]*R
+        end_idx = pos[1]*R
+        wavfile.write(file + "_seg_{}".format(i+1) + suffix, sr, x[start_idx:end_idx].astype(np.int16))
 
 
 if __name__ == "__main__":
