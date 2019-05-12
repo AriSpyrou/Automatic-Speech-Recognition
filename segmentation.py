@@ -2,30 +2,45 @@ import librosa
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-import matplotlib.pyplot as plt
 import os
 
 
-file = "voice//567890"
+file = "voice//A09"
 suffix = ".wav"
+
+
+def preprocess(sr, x):
+    x = x.T
+    if x.shape[0] == 2:
+        x = librosa.to_mono(x.astype(float))
+    if sr != 8000:
+        x = librosa.resample(x.astype(float), sr, 8000)
+    return 8000, x
 
 
 def filter_audio(filename):
     sr, x = wavfile.read(filename + suffix)  # Load the audio clip with native sampling rate
+    sr, x = preprocess(sr, x)
     b = signal.firwin(101, [500, 3500], fs=sr, pass_zero=False)  # Create a FIR band pass filter
     x = signal.lfilter(b, [1], x, axis=0)  # Apply the filter
     wavfile.write(filename + "_filtered" + suffix, sr, x.astype(np.int16))  # Save filtered as wav
 
 
 def segment(filename):
+    suffix = ".wav"
+    if ".wav" in filename:
+        filename, suffix = filename.split('.')
+        suffix = '.' + suffix
     if "filtered" not in filename:
         if os.path.exists(filename+"_filtered"+suffix):
             filename = filename+"_filtered"
         else:
             filter_audio(filename)
+            filename = filename + "_filtered"
     sr, x = wavfile.read(filename + suffix)  # Load the audio clip with native sampling rate
+    sr, x = preprocess(sr, x)
 
-    NS = 40  # Window size in ms
+    NS = 10  # Window size in ms
     MS = 10  # Window offset in ms
     L = int(NS * (sr/1000))  # Window size in samples
     R = int(MS * (sr/1000))  # Window offset in samples
@@ -35,7 +50,7 @@ def segment(filename):
     E = []
     i = 0
     while True:
-        temp = x[i*R:i*R+R].astype(np.int64)
+        temp = x[i*R:i*R+L].astype(np.int64)
         E.append(np.sum(np.square(temp)))
         i += 1
         if i*R > len(x) or i*R+L > len(x):
