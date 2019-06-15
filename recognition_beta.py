@@ -6,7 +6,7 @@ import glob
 from dtw import accelerated_dtw
 
 prefix = "voice//"
-filename = "M1"
+filename = "F1"
 suffix = ".wav"
 
 SAVE = 0
@@ -51,5 +51,5 @@ if __name__ == "__main__":
                 z = np.load(it)
                 mat.append(accelerated_dtw(feat, z, dist='euclidean')[0])
                 mat_file.append(it[12:-4])
-            print(mat_file[mat.index(min(mat))])
+            print(mat_file[mat.index(min(mat))][3:])
 

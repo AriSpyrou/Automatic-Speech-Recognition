@@ -2,13 +2,12 @@ import librosa
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-from matplotlib import pyplot as plt
 
-file = "voice//M2"
+file = "voice//F1"
 suffix = ".wav"
 
-SAVE_FIL = 0  # Save filtered audio to file
-SAVE_SEGS = 1  # Save segmented audio clips for debugging and evaluation
+SAVE_FIL = 1  # Save filtered audio to file
+SAVE_SEGS = 0  # Save segmented audio clips for debugging and evaluation
 
 
 def preprocess(sr, x):
@@ -56,8 +55,6 @@ def segment(filename):
             E = np.array(E)
             E = 10*np.log(E)
             E = np.subtract(E, E.max())
-            #plt.plot(E)
-            #plt.show()
             break
     os = 0
     for val in E:
