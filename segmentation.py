@@ -3,11 +3,11 @@ import numpy as np
 from scipy import signal
 from scipy.io import wavfile
 
-file = "voice//F1"
-suffix = ".wav"
+file = "voice//M1"  # Name of file to be segmented in case segmentation.py is run by itself
+suffix = ".wav"  # Suffix of file note that this program only supports wav files
 
-SAVE_FIL = 1  # Save filtered audio to file
-SAVE_SEGS = 0  # Save segmented audio clips for debugging and evaluation
+SAVE_FIL = 0  # Save filtered audio to file
+SAVE_SEGS = 1  # Save segmented audio clips for debugging and evaluation
 
 
 def preprocess(sr, x):
@@ -56,7 +56,7 @@ def segment(filename):
             E = 10*np.log(E)
             E = np.subtract(E, E.max())
             break
-    os = 0
+    os = 0  # Offset in case the first few values in E are -inf which causes problems
     for val in E:
         if val == -np.inf:
             os += 1
@@ -70,7 +70,7 @@ def segment(filename):
     end_idx = 0
     voice_pos = []
 
-    # Find the multi-frames where the logarithmic energy is above ITU and save them in a list
+    # Find the multi-frames where the logarithmic energy is above ITL and save them in a list
     for i, val in enumerate(E):
         if i < end_idx:
             continue
@@ -115,4 +115,6 @@ def segment(filename):
 
 
 if __name__ == "__main__":
-    segment(file)
+    out = segment(file)
+    print(np.divide(out, 8000))
+    print("Results are displayed in seconds")

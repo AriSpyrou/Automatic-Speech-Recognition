@@ -6,11 +6,11 @@ import glob
 from dtw import accelerated_dtw
 
 prefix = "voice//"
-filename = "F1"
+filename = "M1"
 suffix = ".wav"
 
-SAVE = 0
-N_MFCC = 18
+SAVE = 0  # If set to 1 the program updates the "database" and doesn't do the recognition
+N_MFCC = 18  # Number of MFCCs calculated we found out that 18 was a sweet spot
 
 if __name__ == "__main__":
     sr, x = wavfile.read(prefix + filename + suffix)  # Load the audio clip with native sampling rate
@@ -51,5 +51,11 @@ if __name__ == "__main__":
                 z = np.load(it)
                 mat.append(accelerated_dtw(feat, z, dist='euclidean')[0])
                 mat_file.append(it[12:-4])
+            #
+            # Prints the filename which is the most similar for each sound segment
+            # By printing M1-0 for example the program found that M1-0 is the most
+            # similar and by extension means that the number which was pronounced
+            # was "zero", M1-1 would be "one", M1-2 would be "two" and so forth.
+            #
             print(mat_file[mat.index(min(mat))][3:])
 
